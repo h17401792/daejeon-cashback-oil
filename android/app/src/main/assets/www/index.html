@@ -822,7 +822,9 @@
         iconSize: [16, 16],
         iconAnchor: [8, 8]
       });
-      refMarker = L.marker([refLat, refLon], { icon, interactive: false }).addTo(map);
+      refMarker = L.marker([refLat, refLon], { icon, interactive: true })
+        .bindTooltip(gpsActive ? "내 GPS 위치" : "기준 위치", { direction: "top" })
+        .addTo(map);
     }
 
     function setMobileView(mode) {

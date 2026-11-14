@@ -1,4 +1,4 @@
-const CACHE_NAME = "daejeon-cashback-oil-v1";
+const CACHE_NAME = "daejeon-cashback-oil-v2";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
