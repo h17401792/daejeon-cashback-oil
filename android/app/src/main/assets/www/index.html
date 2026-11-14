@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="대전주유" />
+  <meta name="description" content="대전 온통대전(대전사랑카드) 캐시백 제공 주유소·LPG충전소 실시간 유가 및 체감가 비교" />
+  <title>대전 캐시백 주유 지도 (온통대전)</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <style>
+    :root {
+      --bg: #f4f7f8;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --mint: #0d9488;
+      --mint-dark: #0f766e;
+      --mint-soft: #ccfbf1;
+      --amber: #d97706;
+      --amber-soft: #fef3c7;
+      --radius: 14px;
+      --shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* Top Header */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: linear-gradient(135deg, #0f766e, #0d9488);
+      color: #fff;
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
+      box-shadow: 0 2px 12px rgba(15, 118, 110, 0.25);
+    }
+    .topbar-inner {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+    .brand-logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      flex-shrink: 0;
+    }
+    .brand-pill {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      padding: 6px 10px;
+      border-radius: 9px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.28); }
+    .btn-install {
+      background: #fde047;
+      color: #422006;
+      border: none;
+      padding: 6px 11px;
+      border-radius: 9px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: none;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 12px 12px 32px;
+    }
+
+    /* Controls Card */
+    .controls-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 10px;
+    }
+    .row-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .fuel-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      flex: 1 1 360px;
+    }
+    .fuel-tab {
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--muted);
+      padding: 9px 6px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: 0.15s;
+      text-align: center;
+    }
+    .fuel-tab.active {
+      background: var(--mint-dark);
+      color: #fff;
+      border-color: var(--mint-dark);
+      box-shadow: 0 2px 8px rgba(15, 118, 110, 0.22);
+    }
+    .fuel-count { font-size: 0.72rem; opacity: 0.85; font-weight: 500; }
+
+    .refresh-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .refresh-meta { font-size: 0.76rem; color: var(--muted); }
+    .btn-refresh {
+      background: var(--amber);
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-refresh:hover { background: #b45309; }
+    .btn-refresh:disabled { opacity: 0.55; cursor: wait; }
+
+    /* Cashback Calculator Bar */
+    .cashback-bar {
+      margin-top: 10px;
+      padding: 9px 11px;
+      background: #f0fdfa;
+      border: 1px solid #99f6e4;
+      border-radius: 11px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .cb-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--mint-dark);
+    }
+    .chip-btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 0.77rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .chip-btn.active {
+      background: var(--mint);
+      color: #fff;
+      border-color: var(--mint);
+    }
+    .chip-fav.active {
+      background: #f59e0b;
+      color: #fff;
+      border-color: #f59e0b;
+    }
+    .num-input {
+      width: 60px;
+      padding: 4px 6px;
+      border: 1px solid #5eead4;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--mint-dark);
+      background: #fff;
+    }
+
+    /* Filter Bar */
+    .filter-row {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+    }
+    .gu-chips {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .search-input, .select-input {
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      color: var(--text);
+      min-height: 36px;
+    }
+    .search-input { flex: 1 1 180px; }
+    .select-input { cursor: pointer; }
+    .gps-btn {
+      border: 1px solid var(--mint);
+      background: #fff;
+      color: var(--mint-dark);
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 36px;
+    }
+    .gps-btn.active { background: var(--mint-dark); color: #fff; }
+    .check-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    /* Summary Strip */
+    .summary-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding: 0 2px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .summary-highlight { font-weight: 800; color: var(--mint-dark); }
+
+    /* Mobile View Toggle */
+    .mobile-view-toggle {
+      display: none;
+      margin-bottom: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+    }
+    .mobile-view-toggle button {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 8px;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .mobile-view-toggle button.active {
+      background: var(--mint-dark);
+      color: #fff;
+    }
+
+    /* Split Content Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .list-col {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .station-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 13px 14px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.12s;
+    }
+    .station-card:hover { border-color: #5eead4; }
+    .station-card.selected {
+      border: 2px solid var(--mint);
+      background: #f0fdfa;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .card-left { min-width: 0; flex: 1; }
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 7px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      background: #e2e8f0;
+      color: #334155;
+    }
+    .rank-badge.top1 { background: #0d9488; color: #fff; }
+    .rank-badge.top2 { background: #14b8a6; color: #fff; }
+    .rank-badge.top3 { background: #f59e0b; color: #fff; }
+    .brand-tag {
+      font-size: 0.71rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .brand-SKE { background: #fee2e2; color: #b91c1c; }
+    .brand-GSC { background: #dcfce7; color: #166534; }
+    .brand-HDO { background: #dbeafe; color: #1d4ed8; }
+    .brand-SOL { background: #fef3c7; color: #b45309; }
+    .brand-RTO { background: #ede9fe; color: #6d28d9; }
+    .brand-SKG { background: #ffedd5; color: #c2410c; }
+    .fac-tag {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .fav-btn {
+      border: none;
+      background: transparent;
+      font-size: 1.08rem;
+      line-height: 1;
+      padding: 2px 4px;
+      cursor: pointer;
+      color: #cbd5e1;
+    }
+    .fav-btn.active { color: #f59e0b; }
+
+    .station-name {
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 2px;
+      word-break: keep-all;
+    }
+    .ontong-alias {
+      font-size: 0.74rem;
+      color: var(--mint-dark);
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .station-addr { font-size: 0.8rem; color: var(--muted); }
+
+    .price-box { text-align: right; flex-shrink: 0; }
+    .raw-price { font-size: 0.76rem; color: var(--muted); }
+    .eff-price {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--mint-dark);
+      letter-spacing: -0.02em;
+    }
+    .save-line { font-size: 0.72rem; color: var(--amber); font-weight: 700; }
+    .price-time { font-size: 0.68rem; color: #94a3b8; margin-top: 2px; }
+
+    .card-actions {
+      margin-top: 9px;
+      padding-top: 9px;
+      border-top: 1px dashed var(--border);
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .act-link {
+      text-decoration: none;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 5px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .act-link:hover { background: #e2e8f0; }
+    .act-kakao { background: #fef08a; border-color: #fde047; color: #713f12; }
+    .act-naver { background: #dcfce7; border-color: #bbf7d0; color: #14532d; }
+
+    /* Map */
+    .map-col {
+      position: sticky;
+      top: 70px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    #map {
+      width: 100%;
+      height: calc(100vh - 105px);
+      min-height: 460px;
+      background: #e2e8f0;
+    }
+    .price-pin {
+      background: #0f766e;
+      color: #fff;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+      white-space: nowrap;
+      text-align: center;
+    }
+    .price-pin.cheap { background: #059669; }
+    .price-pin.mid { background: #0284c7; }
+    .price-pin.high { background: #64748b; }
+    .price-pin.active { background: #d97706; transform: scale(1.15); z-index: 999 !important; }
+    .ref-pin {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #2563eb;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.25);
+    }
+
+    .unmatched-box {
+      margin-top: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 15px;
+    }
+    .unmatched-box summary {
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+    .unmatched-list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .footer-note {
+      margin-top: 12px;
+      font-size: 0.74rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      z-index: 2000;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      max-width: 92vw;
+      text-align: center;
+      display: none;
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.48);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1500;
+      padding: 16px;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      padding: 18px;
+      width: 100%;
+      max-width: 450px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
+    }
+    .modal h3 { margin: 0 0 10px; font-size: 1.04rem; }
+    .info-item {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 9px;
+      font-size: 0.82rem;
+    }
+    .info-item strong { display: block; margin-bottom: 3px; color: var(--mint-dark); }
+    .apk-btn {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 8px 12px;
+      border-radius: 9px;
+      background: var(--mint-dark);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.82rem;
+      text-decoration: none;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+    @media (max-width: 959px) {
+      .mobile-view-toggle { display: flex; }
+      .main-grid { grid-template-columns: 1fr; }
+      .map-col { position: relative; top: 0; }
+      #map { height: 68vh; min-height: 360px; }
+      .hide-mobile { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-title">
+        <img class="brand-logo" src="./icons/icon-192.png" alt="아이콘" />
+        <span>대전 캐시백 주유 지도</span>
+        <span class="brand-pill" id="matchedBadge">로딩 중</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-install" id="installBtn" onclick="triggerInstall()">앱 설치</button>
+        <button class="btn-ghost" onclick="openInfoModal()">정보 · APK</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="controls-card">
+      <div class="row-wrap">
+        <div class="fuel-tabs" id="fuelTabs">
+          <button class="fuel-tab active" data-fuel="B027">휘발유 <span class="fuel-count" id="cnt-B027"></span></button>
+          <button class="fuel-tab" data-fuel="D047">경유 <span class="fuel-count" id="cnt-D047"></span></button>
+          <button class="fuel-tab" data-fuel="B034">고급휘발 <span class="fuel-count" id="cnt-B034"></span></button>
+          <button class="fuel-tab" data-fuel="K015">LPG <span class="fuel-count" id="cnt-K015"></span></button>
+        </div>
+        <div class="refresh-box">
+          <span class="refresh-meta" id="refreshMeta">갱신 시각: -</span>
+          <button class="btn-refresh" id="refreshBtn" onclick="reloadLatestData()">최신 가격 불러오기</button>
+        </div>
+      </div>
+
+      <div class="cashback-bar">
+        <div class="cb-group">
+          <span>캐시백:</span>
+          <button class="chip-btn" data-cb="0">0%</button>
+          <button class="chip-btn" data-cb="7">7%</button>
+          <button class="chip-btn active" data-cb="10">10%</button>
+          <button class="chip-btn" data-cb="15">15%</button>
+          <input type="number" id="cbInput" class="num-input" value="10" min="0" max="50" step="0.5" />%
+        </div>
+        <div class="cb-group">
+          <span>주유량:</span>
+          <input type="number" id="litersInput" class="num-input" value="50" min="1" max="300" step="5" />L
+          <span style="color:var(--muted); font-weight:500; font-size:0.76rem;">(체감가·절약액 계산)</span>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="gu-chips" id="guChips">
+          <button class="chip-btn active" data-gu="">전체</button>
+          <button class="chip-btn" data-gu="동구">동구</button>
+          <button class="chip-btn" data-gu="중구">중구</button>
+          <button class="chip-btn" data-gu="서구">서구</button>
+          <button class="chip-btn" data-gu="유성구">유성구</button>
+          <button class="chip-btn" data-gu="대덕구">대덕구</button>
+        </div>
+        <button class="chip-btn chip-fav" id="favOnlyBtn" onclick="toggleFavOnly()">★ 단골 (<span id="favCount">0</span>)</button>
+        <input type="text" id="searchInput" class="search-input" placeholder="주유소명·주소·전화 검색" />
+        <select id="sortSelect" class="select-input">
+          <option value="price">체감 최저가순</option>
+          <option value="dist">거리순 (기준위치)</option>
+          <option value="name">가나다순</option>
+        </select>
+        <select id="landmarkSelect" class="select-input">
+          <option value="36.3504,127.3845">기준: 대전시청(둔산)</option>
+          <option value="36.3537,127.3413">기준: 유성온천역</option>
+          <option value="36.3325,127.4342">기준: 대전역</option>
+          <option value="36.3227,127.4036">기준: 서대전네거리</option>
+          <option value="36.4496,127.4288">기준: 신탄진역</option>
+          <option value="36.3016,127.3357">기준: 관저동</option>
+          <option value="36.3364,127.3418">기준: 도안/목원대</option>
+        </select>
+        <button class="gps-btn" id="gpsBtn" onclick="useGpsLocation()">내 위치 GPS</button>
+        <label class="check-label"><input type="checkbox" id="washCheck" /> 세차장</label>
+        <label class="check-label"><input type="checkbox" id="cvsCheck" /> 편의점</label>
+      </div>
+    </section>
+
+    <div class="summary-strip">
+      <div id="summaryText">데이터를 불러오는 중입니다...</div>
+      <div style="font-size:0.75rem;">※ 온통대전(대전사랑카드) 캐시백 가맹점 기준</div>
+    </div>
+
+    <div class="mobile-view-toggle">
+      <button id="btnViewList" class="active" onclick="setMobileView('list')">목록 보기</button>
+      <button id="btnViewMap" onclick="setMobileView('map')">지도 보기</button>
+    </div>
+
+    <section class="main-grid">
+      <div class="list-col" id="stationList"></div>
+      <div class="map-col hide-mobile" id="mapCol">
+        <div id="map"></div>
+      </div>
+    </section>
+
+    <details class="unmatched-box" id="unmatchedBox">
+      <summary>오피넷 실시간 가격 미제공 가맹점 (5곳) 안내</summary>
+      <ul class="unmatched-list" id="unmatchedList"></ul>
+    </details>
+
+    <footer class="footer-note">
+      데이터 출처: 한국석유공사 오피넷(Opinet) 공공 API · 대전 지역화폐 앱 캐시백 가맹점 목록 기준<br />
+      본 앱은 비공식 안내 서비스이며, 캐시백 예산·정책 변동 및 주유소 휴·폐업 여부는 결제 전 앱에서 다시 확인해 주세요.
+    </footer>
+  </main>
+
+  <div class="modal-backdrop" id="infoModal" onclick="if (event.target === this) closeInfoModal()">
+    <div class="modal">
+      <h3>앱 정보 및 설치 안내</h3>
+      <div class="info-item">
+        <strong>가격 자동 갱신 방식</strong>
+        <span id="modalScheduleText">-</span><br />
+        <span id="modalUpdatedText">마지막 갱신: -</span>
+      </div>
+      <div class="info-item" id="modalInstallGuide">
+        <strong>스마트폰 앱 설치 방법 (PWA)</strong>
+        안드로이드(크롬·삼성인터넷): 상단 <b>앱 설치</b> 버튼 또는 브라우저 메뉴 → <b>앱 설치 / 홈 화면에 추가</b><br />
+        아이폰(Safari): 하단 공유 버튼(□↑) → <b>홈 화면에 추가</b>
+      </div>
+      <div class="info-item" id="modalApkBox">
+        <strong>안드로이드 APK 직접 다운로드</strong>
+        브라우저 설치 외에 독립 `.apk` 파일로도 설치할 수 있습니다.<br />
+        <a class="apk-btn" id="apkDownloadLink" href="https://github.com/h17401792/daejeon-cashback-oil/releases/latest/download/daejeon-cashback-oil.apk" target="_blank" rel="noopener">안드로이드 APK 받기</a>
+      </div>
+      <div class="info-item">
+        <strong>안내 및 출처</strong>
+        한국석유공사 오피넷(Opinet) Open API 유가 정보와 온통대전(대전사랑카드) 캐시백 가맹점 정보를 결합해 체감가를 계산하는 비공식 앱입니다. 위치 권한(GPS)은 거리 계산에만 사용되며 외부 서버로 전송되지 않습니다.
+      </div>
+      <div class="modal-actions">
+        <button class="chip-btn active" onclick="closeInfoModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    const REMOTE_DATA_URL = "https://h17401792.github.io/daejeon-cashback-oil/data/stations.json";
+    const BRAND_LABELS = {
+      SKE: "SK에너지",
+      GSC: "GS칼텍스",
+      HDO: "HD현대",
+      SOL: "S-OIL",
+      RTO: "알뜰",
+      RTX: "고속도로알뜰",
+      NHO: "농협알뜰",
+      SKG: "SK가스",
+      E1G: "E1",
+      ETC: "자가/기타"
+    };
+    const FUEL_NAMES = { B027: "휘발유", D047: "경유", B034: "고급휘발유", K015: "LPG" };
+
+    let masterData = null;
+    let currentFuel = localStorage.getItem("ontong_fuel") || "B027";
+    let currentGu = "";
+    let favOnly = false;
+    let favorites = new Set(JSON.parse(localStorage.getItem("ontong_favs_v1") || "[]"));
+    let cashbackRate = parseFloat(localStorage.getItem("ontong_cb") || "10");
+    let refLat = 36.3504;
+    let refLon = 127.3845;
+    let gpsActive = false;
+    let selectedUid = null;
+    let map = null;
+    let markersLayer = null;
+    let refMarker = null;
+    let markerByUid = {};
+    let deferredInstallPrompt = null;
+
+    const isAndroidBridge = Boolean(window.AndroidBridge && typeof window.AndroidBridge.isNativeApp === "function" && window.AndroidBridge.isNativeApp());
+    const isStandalonePwa = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalonePwa;
+
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => { el.style.display = "none"; }, 3200);
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function escapeHtml(s) {
+      return String(s || "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+      }[ch]));
+    }
+
+    function formatPrice(n) {
+      return Math.round(n).toLocaleString("ko-KR");
+    }
+
+    function initMap() {
+      if (map) return;
+      if (typeof L === "undefined") {
+        document.getElementById("map").innerHTML =
+          '<div style="padding:24px;text-align:center;color:#64748b;font-size:0.86rem;">오프라인 상태이거나 지도 타일 서버에 연결할 수 없습니다.<br/>목록에서 주유소 가격 및 카카오맵·네이버지도 길찾기를 이용해 주세요.</div>';
+        return;
+      }
+      map = L.map("map").setView([refLat, refLon], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(map);
+      markersLayer = L.layerGroup().addTo(map);
+      updateRefMarker();
+    }
+
+    function updateRefMarker() {
+      if (!map || typeof L === "undefined") return;
+      if (refMarker) map.removeLayer(refMarker);
+      const icon = L.divIcon({
+        className: "",
+        html: '<div class="ref-pin" title="기준 위치"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+      refMarker = L.marker([refLat, refLon], { icon, interactive: false }).addTo(map);
+    }
+
+    function setMobileView(mode) {
+      const listCol = document.getElementById("stationList");
+      const mapCol = document.getElementById("mapCol");
+      const btnL = document.getElementById("btnViewList");
+      const btnM = document.getElementById("btnViewMap");
+      if (mode === "map") {
+        listCol.classList.add("hide-mobile");
+        mapCol.classList.remove("hide-mobile");
+        btnL.classList.remove("active");
+        btnM.classList.add("active");
+        if (map) setTimeout(() => map.invalidateSize(), 120);
+      } else {
+        listCol.classList.remove("hide-mobile");
+        mapCol.classList.add("hide-mobile");
+        btnL.classList.add("active");
+        btnM.classList.remove("active");
+      }
+    }
+
+    function syncCashbackButtons(skipInputUpdate = false) {
+      if (!skipInputUpdate) {
+        document.getElementById("cbInput").value = cashbackRate;
+      }
+      document.querySelectorAll("[data-cb]").forEach(btn => {
+        btn.classList.toggle("active", parseFloat(btn.dataset.cb) === cashbackRate);
+      });
+      localStorage.setItem("ontong_cb", String(cashbackRate));
+    }
+
+    function toggleFavorite(uid) {
+      if (favorites.has(uid)) {
+        favorites.delete(uid);
+      } else {
+        favorites.add(uid);
+      }
+      localStorage.setItem("ontong_favs_v1", JSON.stringify([...favorites]));
+      updateHeaderMeta();
+      renderAll();
+    }
+
+    function toggleFavOnly() {
+      favOnly = !favOnly;
+      document.getElementById("favOnlyBtn").classList.toggle("active", favOnly);
+      renderAll();
+    }
+
+    function updateHeaderMeta() {
+      if (!masterData) return;
+      document.getElementById("matchedBadge").textContent = `${masterData.matched_opinet_stations_count}곳`;
+      document.getElementById("favCount").textContent = String(favorites.size);
+
+      ["B027", "D047", "B034", "K015"].forEach(code => {
+        const cnt = masterData.stations.filter(s => s.prices && s.prices[code]).length;
+        const span = document.getElementById(`cnt-${code}`);
+        if (span) span.textContent = `(${cnt})`;
+      });
+
+      const lastRef = (masterData.last_refresh && masterData.last_refresh[currentFuel]) ||
+                      (masterData.meta && masterData.meta.last_updated_kst) || null;
+      document.getElementById("refreshMeta").textContent = lastRef
+        ? `기준: ${lastRef}`
+        : "초기 스냅샷 기준";
+
+      document.getElementById("modalScheduleText").textContent =
+        (masterData.meta && masterData.meta.auto_refresh_schedule) || "주기적 자동 갱신";
+      document.getElementById("modalUpdatedText").textContent =
+        `마지막 갱신: ${(masterData.meta && masterData.meta.last_updated_kst) || lastRef || "-"}`;
+
+      const ul = document.getElementById("unmatchedList");
+      ul.innerHTML = (masterData.unmatched_ontong_entries || []).map(u =>
+        `<li><strong>${escapeHtml(u.name)}</strong> (${escapeHtml(u.address)}, ${escapeHtml(u.phone)}) — 오피넷 미등록</li>`
+      ).join("");
+    }
+
+    function getFilteredStations() {
+      if (!masterData) return [];
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
+      const washOnly = document.getElementById("washCheck").checked;
+      const cvsOnly = document.getElementById("cvsCheck").checked;
+      const sortBy = document.getElementById("sortSelect").value;
+      const mult = Math.max(0, 1 - cashbackRate / 100);
+
+      let list = masterData.stations
+        .filter(s => s.prices && s.prices[currentFuel] && s.prices[currentFuel].price > 0)
+        .filter(s => !currentGu || s.gu === currentGu)
+        .filter(s => !favOnly || favorites.has(s.uni_id))
+        .filter(s => !washOnly || s.car_wash_yn === "Y")
+        .filter(s => !cvsOnly || s.cvs_yn === "Y")
+        .filter(s => {
+          if (!q) return true;
+          const hay = [s.opinet_name, ...(s.ontong_names || []), s.address, s.phone].join(" ").toLowerCase();
+          return hay.includes(q);
+        })
+        .map(s => {
+          const raw = s.prices[currentFuel].price;
+          const eff = raw * mult;
+          const dist = haversineKm(refLat, refLon, s.lat, s.lon);
+          return { ...s, rawPrice: raw, effPrice: eff, distKm: dist, priceInfo: s.prices[currentFuel] };
+        });
+
+      list.sort((a, b) => {
+        if (sortBy === "dist") return a.distKm - b.distKm || a.effPrice - b.effPrice;
+        if (sortBy === "name") return a.opinet_name.localeCompare(b.opinet_name, "ko");
+        return a.effPrice - b.effPrice || a.distKm - b.distKm;
+      });
+      return list;
+    }
+
+    function renderAll() {
+      const list = getFilteredStations();
+      const liters = Math.max(1, parseFloat(document.getElementById("litersInput").value || "50"));
+
+      const sumEl = document.getElementById("summaryText");
+      if (list.length === 0) {
+        sumEl.innerHTML = `<span class="summary-highlight">조건에 맞는 주유소가 없습니다.</span>`;
+      } else {
+        const minRaw = Math.min(...list.map(x => x.rawPrice));
+        const minEff = Math.min(...list.map(x => x.effPrice));
+        const avgRaw = list.reduce((acc, x) => acc + x.rawPrice, 0) / list.length;
+        sumEl.innerHTML = `<span class="summary-highlight">${list.length}곳</span> · 최저 체감가 <span class="summary-highlight">${formatPrice(minEff)}원</span> (표시 ${formatPrice(minRaw)}원 · 평균 ${formatPrice(avgRaw)}원)`;
+      }
+
+      const listEl = document.getElementById("stationList");
+      listEl.innerHTML = list.map((s, idx) => {
+        const rank = idx + 1;
+        const rankCls = rank === 1 ? "top1" : rank === 2 ? "top2" : rank === 3 ? "top3" : "";
+        const brandLabel = BRAND_LABELS[s.brand] || s.brand;
+        const aliasDiff = (s.ontong_names || []).filter(n => n.replace(/\s+/g, "") !== s.opinet_name.replace(/\s+/g, ""));
+        const aliasHtml = aliasDiff.length
+          ? `<div class="ontong-alias">온통대전 앱명: ${escapeHtml(aliasDiff.join(" / "))}</div>`
+          : "";
+        const savePerL = s.rawPrice - s.effPrice;
+        const saveTotal = savePerL * liters;
+        const dtTxt = s.priceInfo.refreshed_at
+          ? `갱신 ${s.priceInfo.refreshed_at.slice(5, 16)}`
+          : (s.priceInfo.dt ? `오피넷 ${s.priceInfo.dt.slice(4,6)}/${s.priceInfo.dt.slice(6,8)}` : "");
+        const isFav = favorites.has(s.uni_id);
+
+        const kakaoUrl = `https://map.kakao.com/link/to/${encodeURIComponent(s.opinet_name)},${s.lat},${s.lon}`;
+        const naverUrl = `https://map.naver.com/v5/search/${encodeURIComponent(s.address + " " + s.opinet_name)}`;
+
+        return `
+          <article class="station-card ${selectedUid === s.uni_id ? "selected" : ""}" id="card-${s.uni_id}" onclick="focusStation('${s.uni_id}', false)">
+            <div class="card-top">
+              <div class="card-left">
+                <div class="badges-row">
+                  <span class="rank-badge ${rankCls}">${rank}</span>
+                  <span class="brand-tag brand-${s.brand}">${escapeHtml(brandLabel)}</span>
+                  <span class="fac-tag">${s.distKm.toFixed(1)}km</span>
+                  ${s.car_wash_yn === "Y" ? '<span class="fac-tag">세차</span>' : ""}
+                  ${s.cvs_yn === "Y" ? '<span class="fac-tag">편의점</span>' : ""}
+                  <button class="fav-btn ${isFav ? "active" : ""}" title="단골 즐겨찾기" onclick="event.stopPropagation(); toggleFavorite('${s.uni_id}')">${isFav ? "★" : "☆"}</button>
+                </div>
+                <div class="station-name">${escapeHtml(s.opinet_name)}</div>
+                ${aliasHtml}
+                <div class="station-addr">${escapeHtml(s.address)}</div>
+              </div>
+              <div class="price-box">
+                <div class="raw-price">표시 ${formatPrice(s.rawPrice)}원</div>
+                <div class="eff-price">${formatPrice(s.effPrice)}원</div>
+                ${cashbackRate > 0 ? `<div class="save-line">-${formatPrice(savePerL)}원/L (${liters}L ${formatPrice(saveTotal)}원↓)</div>` : ""}
+                <div class="price-time">${escapeHtml(dtTxt)}</div>
+              </div>
+            </div>
+            <div class="card-actions" onclick="event.stopPropagation()">
+              ${s.phone ? `<a class="act-link" href="tel:${escapeHtml(s.phone)}">전화</a>` : ""}
+              <button class="act-link" onclick="focusStation('${s.uni_id}', true)">지도 핀</button>
+              <a class="act-link act-kakao" href="${kakaoUrl}" target="_blank" rel="noopener">카카오맵</a>
+              <a class="act-link act-naver" href="${naverUrl}" target="_blank" rel="noopener">네이버지도</a>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      renderMarkers(list);
+    }
+
+    function renderMarkers(list) {
+      if (!map || !markersLayer) return;
+      markersLayer.clearLayers();
+      markerByUid = {};
+      if (list.length === 0) return;
+
+      const prices = list.map(x => x.effPrice);
+      const minP = Math.min(...prices);
+      const maxP = Math.max(...prices);
+      const span = Math.max(1, maxP - minP);
+
+      list.forEach(s => {
+        const ratio = (s.effPrice - minP) / span;
+        const tier = ratio <= 0.25 ? "cheap" : ratio <= 0.65 ? "mid" : "high";
+        const activeCls = selectedUid === s.uni_id ? "active" : "";
+        const icon = L.divIcon({
+          className: "",
+          html: `<div class="price-pin ${tier} ${activeCls}">${formatPrice(s.effPrice)}</div>`,
+          iconSize: [56, 24],
+          iconAnchor: [28, 12]
+        });
+        const marker = L.marker([s.lat, s.lon], { icon })
+          .bindPopup(`
+            <strong>${escapeHtml(s.opinet_name)}</strong><br/>
+            표시 ${formatPrice(s.rawPrice)}원 → <b>체감 ${formatPrice(s.effPrice)}원</b><br/>
+            <span style="font-size:12px;color:#475569">${escapeHtml(s.address)}</span>
+          `)
+          .on("click", () => {
+            selectedUid = s.uni_id;
+            const card = document.getElementById(`card-${s.uni_id}`);
+            if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+        marker.addTo(markersLayer);
+        markerByUid[s.uni_id] = marker;
+      });
+    }
+
+    function focusStation(uid, openOnMobileMap) {
+      selectedUid = uid;
+      document.querySelectorAll(".station-card").forEach(el => el.classList.remove("selected"));
+      const card = document.getElementById(`card-${uid}`);
+      if (card) card.classList.add("selected");
+
+      const st = masterData && masterData.stations.find(x => x.uni_id === uid);
+      if (openOnMobileMap && window.innerWidth < 960) {
+        setMobileView("map");
+      }
+      if (map && st) {
+        map.setView([st.lat, st.lon], 15, { animate: true });
+        if (markerByUid[uid]) markerByUid[uid].openPopup();
+      }
+    }
+
+    async function fetchStationsJson(forceNetwork = false) {
+      const bust = forceNetwork ? `?t=${Date.now()}` : "";
+      const isAppAssets = location.hostname === "appassets.androidplatform.net";
+      const candidates = isAppAssets
+        ? [`${REMOTE_DATA_URL}${bust}`, `./data/stations.json`]
+        : [`./data/stations.json${bust}`];
+
+      for (const url of candidates) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 5000);
+          const res = await fetch(url, { cache: forceNetwork ? "no-store" : "default", signal: ctrl.signal });
+          clearTimeout(tid);
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch (e) {
+          // try fallback
+        }
+      }
+      throw new Error("주유소 데이터를 불러올 수 없습니다.");
+    }
+
+    async function reloadLatestData(silent = false) {
+      const btn = document.getElementById("refreshBtn");
+      btn.disabled = true;
+      if (!silent) btn.textContent = "불러오는 중...";
+      try {
+        masterData = await fetchStationsJson(true);
+        updateHeaderMeta();
+        renderAll();
+        if (!silent) {
+          const updatedAt = (masterData.meta && masterData.meta.last_updated_kst) || "최신 캐시";
+          showToast(`최신 가격 데이터를 반영했습니다 (${updatedAt})`);
+        }
+      } catch (err) {
+        if (!silent) showToast("불러오기 오류: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "최신 가격 불러오기";
+      }
+    }
+
+    async function loadInitial() {
+      initMap();
+      setupInstallUi();
+      registerServiceWorker();
+      try {
+        masterData = await fetchStationsJson(false);
+        document.querySelectorAll(".fuel-tab").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.fuel === currentFuel);
+        });
+        syncCashbackButtons(false);
+        updateHeaderMeta();
+        renderAll();
+      } catch (err) {
+        showToast("초기 데이터 로드 오류: " + err.message);
+      }
+    }
+
+    function useGpsLocation() {
+      if (!navigator.geolocation) {
+        showToast("이 브라우저는 GPS 조회를 지원하지 않습니다.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          refLat = pos.coords.latitude;
+          refLon = pos.coords.longitude;
+          gpsActive = true;
+          document.getElementById("gpsBtn").classList.add("active");
+          document.getElementById("sortSelect").value = "dist";
+          updateRefMarker();
+          if (map) map.setView([refLat, refLon], 13);
+          renderAll();
+          showToast("내 GPS 위치 기준으로 거리를 정렬했습니다.");
+        },
+        () => {
+          showToast("위치 권한이 거부되었거나 HTTPS 연결이 필요합니다.");
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    function setupInstallUi() {
+      const btn = document.getElementById("installBtn");
+      if (isAndroidBridge || isStandalonePwa) {
+        btn.style.display = "none";
+        if (isAndroidBridge) {
+          document.getElementById("modalInstallGuide").style.display = "none";
+          document.getElementById("modalApkBox").style.display = "none";
+        }
+        return;
+      }
+      if (isIosSafari) {
+        btn.style.display = "inline-block";
+      }
+      window.addEventListener("beforeinstallprompt", e => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        btn.style.display = "inline-block";
+      });
+      window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        btn.style.display = "none";
+        showToast("홈 화면에 앱이 설치되었습니다.");
+      });
+    }
+
+    async function triggerInstall() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        return;
+      }
+      if (isIosSafari) {
+        showToast("Safari 하단 공유 버튼(□↑) → '홈 화면에 추가'를 눌러 설치하세요.");
+      } else {
+        openInfoModal();
+      }
+    }
+
+    function registerServiceWorker() {
+      if ("serviceWorker" in navigator && location.protocol === "https:" && location.hostname !== "appassets.androidplatform.net") {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      }
+    }
+
+    function openInfoModal() {
+      document.getElementById("infoModal").style.display = "flex";
+    }
+    function closeInfoModal() {
+      document.getElementById("infoModal").style.display = "none";
+    }
+
+    document.getElementById("fuelTabs").addEventListener("click", e => {
+      const btn = e.target.closest(".fuel-tab");
+      if (!btn) return;
+      currentFuel = btn.dataset.fuel;
+      localStorage.setItem("ontong_fuel", currentFuel);
+      document.querySelectorAll(".fuel-tab").forEach(b => b.classList.toggle("active", b === btn));
+      updateHeaderMeta();
+      renderAll();
+    });
+
+    document.querySelectorAll("[data-cb]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        cashbackRate = parseFloat(btn.dataset.cb);
+        syncCashbackButtons(false);
+        renderAll();
+      });
+    });
+
+    document.getElementById("cbInput").addEventListener("input", e => {
+      const v = parseFloat(e.target.value);
+      if (!isNaN(v) && v >= 0 && v <= 50) {
+        cashbackRate = v;
+        syncCashbackButtons(true);
+        renderAll();
+      }
+    });
+
+    document.getElementById("litersInput").addEventListener("input", renderAll);
+    document.getElementById("guChips").addEventListener("click", e => {
+      const btn = e.target.closest("[data-gu]");
+      if (!btn) return;
+      currentGu = btn.dataset.gu;
+      document.querySelectorAll("[data-gu]").forEach(b => b.classList.toggle("active", b === btn));
+      renderAll();
+    });
+    document.getElementById("searchInput").addEventListener("input", renderAll);
+    document.getElementById("sortSelect").addEventListener("change", renderAll);
+    document.getElementById("washCheck").addEventListener("change", renderAll);
+    document.getElementById("cvsCheck").addEventListener("change", renderAll);
+    document.getElementById("landmarkSelect").addEventListener("change", e => {
+      const [la, lo] = e.target.value.split(",").map(Number);
+      refLat = la;
+      refLon = lo;
+      gpsActive = false;
+      document.getElementById("gpsBtn").classList.remove("active");
+      updateRefMarker();
+      if (map) map.setView([refLat, refLon], 13);
+      renderAll();
+    });
+
+    loadInitial();
+  </script>
+</body>
+</html>

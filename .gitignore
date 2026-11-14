@@ -1,0 +1,22 @@
+# Local Python / IDE / OS
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# Never commit local API keys or secrets
+opinet_config.json
+.env
+*.keystore
+*.jks
+local.properties
+
+# Android Gradle build outputs
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+android/*.iml
+android/app/*.iml

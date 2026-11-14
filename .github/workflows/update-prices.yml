@@ -1,0 +1,80 @@
+name: Update Opinet Prices & Deploy PWA
+
+on:
+  schedule:
+    # Run 8 times daily (KST 06:15, 08:15, 10:30, 12:30, 14:30, 16:30, 18:30, 21:30)
+    # Max 8 * 26 = 208 calls/day (safely within 300 calls/day free quota)
+    - cron: "15 21,23 * * *"
+    - cron: "30 1,3,5,7,9,12 * * *"
+  workflow_dispatch:
+    inputs:
+      fuels:
+        description: "갱신할 유종 (비워두면 전체: B027,D047,B034,K015)"
+        required: false
+        default: "B027,D047,B034,K015"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-and-prices"
+  cancel-in-progress: false
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh Opinet prices
+        env:
+          OPINET_API_KEY: ${{ secrets.OPINET_API_KEY }}
+          FUELS: ${{ github.event.inputs.fuels || 'B027,D047,B034,K015' }}
+        run: |
+          if [ -z "$OPINET_API_KEY" ]; then
+            echo "::error::GitHub Repository Secret 'OPINET_API_KEY'가 설정되어 있지 않습니다."
+            exit 1
+          fi
+          python scripts/update_prices.py --fuels "$FUELS"
+
+      - name: Commit updated prices
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/stations.json
+          if git diff --cached --quiet; then
+            echo "No price changes."
+          else
+            git commit -m "chore: update cached Daejeon fuel prices"
+            git push
+          fi
+
+  deploy-pages:
+    needs: update-prices
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload PWA artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
