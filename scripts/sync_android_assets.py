@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC_DOCS = ROOT / "docs"
 DST_WWW = ROOT / "android" / "app" / "src" / "main" / "assets" / "www"
 EXCLUDED_DIRS = {"download", "__pycache__"}
-EXCLUDED_FILES = {".DS_Store", "Thumbs.db"}
+EXCLUDED_FILES = {"_headers", ".DS_Store", "Thumbs.db"}
 
 
 def sync_assets(src_dir: Path = SRC_DOCS, dst_dir: Path = DST_WWW) -> int:

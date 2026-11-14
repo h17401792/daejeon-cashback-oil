@@ -4,7 +4,7 @@ plugins {
 }
 
 val pwaUrl: String = (project.findProperty("PWA_URL") as? String)
-    ?: "https://h17401792.github.io/daejeon-cashback-oil/"
+    ?: "https://daejeon-oil.netlify.app/"
 
 android {
     namespace = "kr.daejeon.cashbackoil"

@@ -9,6 +9,7 @@ Thumbs.db
 # Never commit local API keys or secrets
 opinet_config.json
 .env
+.netlify/
 *.keystore
 *.jks
 local.properties

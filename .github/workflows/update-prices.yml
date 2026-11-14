@@ -1,4 +1,4 @@
-name: Update Opinet Prices & Deploy PWA
+name: Update Opinet Prices & Deploy Netlify
 
 on:
   schedule:
@@ -15,11 +15,9 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages-and-prices"
+  group: "netlify-deploy"
   cancel-in-progress: false
 
 jobs:
@@ -58,26 +56,36 @@ jobs:
             git push
           fi
 
-  deploy-pages:
+  deploy-netlify:
     needs: update-prices
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout repository
+      - name: Checkout latest branch commit
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload PWA artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          path: docs
+          node-version: "20"
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Prepare Netlify bundle with latest APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p _deploy/download
+          cp -r docs/* _deploy/
+          cp docs/_headers _deploy/
+          gh release download latest-apk --repo "${{ github.repository }}" --pattern "daejeon-cashback-oil.apk" --dir _deploy/download --clobber || true
+
+      - name: Deploy updated prices to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: "312d6d84-36bc-49b7-872c-a3c870fe461d"
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "NETLIFY_AUTH_TOKEN secret not set; skipping Netlify deploy."
+            exit 0
+          fi
+          npx --yes netlify-cli deploy --dir=_deploy --prod --site="$NETLIFY_SITE_ID" --message="Scheduled Opinet price update"

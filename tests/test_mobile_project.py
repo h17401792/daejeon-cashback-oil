@@ -322,6 +322,21 @@ class TestMobileProject(unittest.TestCase):
                 leaked.append(str(path))
         self.assertEqual(leaked, [], f"API key must NOT appear in deployable repo: {leaked}")
 
+    def test_no_personal_github_username_in_repo(self) -> None:
+        exposed = []
+        forbidden = "h17401" + "792"
+        for path in PROJECT_ROOT.rglob("*"):
+            if path.is_dir() or ".git" in path.parts:
+                continue
+            if path.suffix.lower() in {".png", ".jpg", ".pyc"}:
+                continue
+            if path.resolve() == Path(__file__).resolve():
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if forbidden in text:
+                exposed.append(str(path))
+        self.assertEqual(exposed, [], f"Personal username must NOT appear in repo: {exposed}")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

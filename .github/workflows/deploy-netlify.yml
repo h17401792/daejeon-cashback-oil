@@ -1,0 +1,49 @@
+name: Deploy PWA to Netlify
+
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - "docs/**"
+      - "netlify.toml"
+      - ".github/workflows/deploy-netlify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "netlify-deploy"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Prepare Netlify publish bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p _deploy/download
+          cp -r docs/* _deploy/
+          cp docs/_headers _deploy/
+          gh release download latest-apk --repo "${{ github.repository }}" --pattern "daejeon-cashback-oil.apk" --dir _deploy/download --clobber || true
+
+      - name: Deploy to Netlify production
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: "312d6d84-36bc-49b7-872c-a3c870fe461d"
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "::error::GitHub Secret 'NETLIFY_AUTH_TOKEN'이 등록되어 있지 않습니다."
+            exit 1
+          fi
+          npx --yes netlify-cli deploy --dir=_deploy --prod --site="$NETLIFY_SITE_ID" --message="Deploy PWA from CI"
